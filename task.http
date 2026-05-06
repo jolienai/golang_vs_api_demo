@@ -1,0 +1,47 @@
+@baseUrl = http://localhost:8080
+
+### Health check
+GET {{baseUrl}}/healthz
+
+### Create task
+# @name createTask
+POST {{baseUrl}}/tasks
+Content-Type: application/json
+
+{
+  "title": "Buy milk",
+  "description": "Optional description"
+}
+
+### List tasks
+GET {{baseUrl}}/tasks
+
+### List incomplete tasks with pagination
+GET {{baseUrl}}/tasks?completed=false&limit=25&offset=0
+
+### Get task by ID
+@taskId = 7643554c-b184-4aeb-8c23-00f4ebcd9326
+GET {{baseUrl}}/tasks/{{taskId}}
+
+### Update task
+PATCH {{baseUrl}}/tasks/7643554c-b184-4aeb-8c23-00f4ebcd9326
+Content-Type: application/json
+
+{
+  "completed": true
+}
+
+### Update task title and description
+PATCH {{baseUrl}}/tasks/7643554c-b184-4aeb-8c23-00f4ebcd9326
+Content-Type: application/json
+
+{
+  "title": "Buy oat milk",
+  "description": "Pick it up after work"
+}
+
+### Delete task
+DELETE {{baseUrl}}/tasks/7643554c-b184-4aeb-8c23-00f4ebcd9326
+
+### Get missing task
+GET {{baseUrl}}/tasks/7643554c-b184-4aeb-8c23-00f4ebcd9326
