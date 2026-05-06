@@ -30,6 +30,10 @@ func RunMigrations(ctx context.Context, db *pgxpool.Pool, dir string, logger *sl
 	}
 	defer tx.Rollback(ctx)
 
+	if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(752927853)`); err != nil {
+		return fmt.Errorf("acquire migrations lock: %w", err)
+	}
+
 	if _, err := tx.Exec(ctx, `
 		CREATE TABLE IF NOT EXISTS schema_migrations (
 			version TEXT PRIMARY KEY,
