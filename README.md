@@ -65,6 +65,125 @@ export APP_ENV="local"
 export MIGRATIONS_DIR="migrations"
 ```
 
+## Deploy to K3d
+
+The `k8s/` manifests deploy the same API and PostgreSQL setup into a local k3d cluster. k3d runs K3s inside Docker, which is the easiest way to run a local K3s cluster on macOS.
+
+Install the local Kubernetes tools on macOS:
+
+```bash
+brew install kubectl k3d
+```
+
+Make sure Docker Desktop is running, then create and start a local K3s cluster through k3d:
+
+```bash
+k3d cluster create demo
+kubectl config use-context k3d-demo
+kubectl cluster-info
+```
+
+If the cluster already exists but is stopped, start it:
+
+```bash
+k3d cluster start demo
+kubectl config use-context k3d-demo
+```
+
+Verify the cluster:
+
+```bash
+k3d cluster list
+kubectl get nodes
+```
+
+Build the API image and import it into the k3d cluster:
+
+```bash
+docker compose build api
+k3d image import golang_vs_api_demo-api:latest -c demo
+```
+
+Deploy the manifests:
+
+```bash
+kubectl apply -f k8s/namespace.yaml
+kubectl apply -f k8s/
+kubectl -n golang-vs-api-demo rollout status deploy/postgres
+kubectl -n golang-vs-api-demo rollout status deploy/api
+```
+
+Check whether it is running inside the cluster:
+
+```bash
+kubectl -n golang-vs-api-demo get pods
+kubectl -n golang-vs-api-demo get svc
+kubectl -n golang-vs-api-demo get pvc
+```
+
+Expected pod status:
+
+```text
+api-...        1/1   Running
+postgres-...   1/1   Running
+```
+
+Check API logs:
+
+```bash
+kubectl -n golang-vs-api-demo logs deploy/api --tail=50
+```
+
+Redeploy only the API after changing Go code:
+
+```bash
+docker compose build api
+k3d image import golang_vs_api_demo-api:latest -c demo
+kubectl -n golang-vs-api-demo rollout restart deploy/api
+kubectl -n golang-vs-api-demo rollout status deploy/api
+```
+
+Redeploy only the API manifests after changing Kubernetes config:
+
+```bash
+kubectl apply -f k8s/api.yaml
+kubectl -n golang-vs-api-demo rollout status deploy/api
+```
+
+Redeploy Postgres without deleting data:
+
+```bash
+kubectl apply -f k8s/postgres.yaml
+kubectl -n golang-vs-api-demo rollout restart deploy/postgres
+kubectl -n golang-vs-api-demo rollout status deploy/postgres
+```
+
+Postgres data is stored in the `postgres-data` PersistentVolumeClaim, so pod restarts and Deployment redeploys keep the data. Data can be lost if you delete the PVC, delete the k3d cluster, or remove the local storage backing the cluster.
+
+Test the API from your Mac with port-forwarding:
+
+```bash
+kubectl -n golang-vs-api-demo port-forward svc/api 18080:8080
+```
+
+In another terminal:
+
+```bash
+curl http://127.0.0.1:18080/healthz
+```
+
+Expected response:
+
+```json
+{"status":"ok"}
+```
+
+Delete the k3d deployment:
+
+```bash
+kubectl delete -f k8s/
+```
+
 ## Endpoints
 
 Health check:
